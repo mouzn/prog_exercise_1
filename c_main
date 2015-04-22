@@ -1,0 +1,334 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+ 
+struct DateTime_t{
+    int y;
+    int m;
+    int d;
+    int hh;
+    int mm;
+};
+typedef struct DateTime_t DateTime;
+ 
+struct Sport_t{
+    char *name;
+    int classical;
+    int individual;
+    char *participant1;
+    char *participant2;
+};
+typedef struct Sport_t *Sport_ptr;
+ 
+struct Event_t{
+    char *eventTitle;
+    char *organizer;
+    DateTime happeningTime;
+    char *eventPlace;
+    int official;
+    Sport_ptr sport;
+    struct Event_t *next;
+};
+typedef struct Event_t *Event_ptr;
+ 
+struct Emmission_t{
+    char *title;
+    char *description;
+    int idNumber;
+    char *tvProducer;
+    DateTime startTime,endTime;
+    Event_ptr subjects;
+};
+typedef struct Emmission_t *Emmission_ptr;
+ 
+struct TVNode_t{
+    Emmission_ptr anEmmission;
+    struct TVNode_t *next;
+};
+typedef struct TVNode_t *TVNode_ptr;
+ 
+int read_text(char **pointer,FILE *fp){
+ 
+    char *temp_char_ptr;
+    char temp_char;
+ 
+    if (fgetc(fp)!='<') return -1;
+    temp_char_ptr=malloc(100*sizeof(char));
+    int j=0;
+ 
+    while((temp_char=fgetc(fp))!='>') {
+        *(temp_char_ptr+j)=temp_char;
+        j++;
+    }
+    *(temp_char_ptr+j)='\0';
+    *pointer=temp_char_ptr;
+    return 0;
+}
+ 
+int read_int(int *place_to_put_int,FILE *fp){
+    int temp_int;
+    fscanf(fp,"%d",&temp_int);
+    *place_to_put_int=temp_int;
+    return 0;
+}
+ 
+int read_time(DateTime *targetTime,FILE *fp){
+    if (fgetc(fp)!='<') return -1;
+    read_int(&((*targetTime).y),fp);
+    if (fgetc(fp)!='-') return -1;
+    read_int(&((*targetTime).m),fp);
+    if (fgetc(fp)!='-') return -1;
+    read_int(&((*targetTime).d),fp);
+    if (fgetc(fp)!=',') return -1;
+    read_int(&((*targetTime).hh),fp);
+    if (fgetc(fp)!=':') return -1;
+    read_int(&((*targetTime).mm),fp);
+    if (fgetc(fp)!='>') return -1;
+    return 0;
+}
+ 
+int comp(const void *c,const void *d){
+    long unsigned int aw,bw;
+    Emmission_ptr a,b;
+    a=*(Emmission_ptr *)c;
+    b=*(Emmission_ptr *)d;
+    aw=(a)->startTime.y*100000000+(a)->startTime.m*1000000+(a)->startTime.d*10000+(a)->startTime.hh*100+(a)->startTime.mm;
+    bw=(b)->startTime.y*100000000+(b)->startTime.m*1000000+(b)->startTime.d*10000+(b)->startTime.hh*100+(b)->startTime.mm;
+    return aw-bw;
+}
+ 
+ 
+ 
+int list_sort(TVNode_ptr *head,int emm_num){
+    Emmission_ptr *a;
+    int i;
+    TVNode_ptr temp_TVNode_ptr;
+    temp_TVNode_ptr=*head;
+    a=malloc(emm_num*sizeof(Emmission_ptr));
+ 
+    for(i=0;i<emm_num;i++){
+        *(a+i)=temp_TVNode_ptr->anEmmission;
+        temp_TVNode_ptr=temp_TVNode_ptr->next;
+    }
+ 
+    qsort(a,emm_num,sizeof(Emmission_ptr),comp);
+ 
+    temp_TVNode_ptr=*head;
+    for(i=0;i<emm_num;i++){
+        temp_TVNode_ptr->anEmmission=*(a+emm_num-1-i);
+        temp_TVNode_ptr=temp_TVNode_ptr->next;
+    }
+ 
+ 
+ 
+ 
+ 
+    return 0;
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+}
+ 
+int bool_key(Emmission_ptr a,char *key){
+    Event_ptr temp_Event_ptr;
+    if ((a->subjects)==NULL) return -1;
+    temp_Event_ptr=a->subjects;
+    while(temp_Event_ptr!=NULL){
+        if ((strcmp(temp_Event_ptr->sport->name,key)==0)&&(temp_Event_ptr->official==1)) return 0;
+ //       printf("%s %s",temp_Event_ptr->sport->name,key);
+        temp_Event_ptr=temp_Event_ptr->next;
+    }
+    return -1;
+ 
+}
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+int main()
+{
+ 
+ 
+ 
+    int emmission_num;
+    int event_num;
+    int i,k;
+    TVNode_ptr header_TVNode_ptr=NULL,temp_TVNode_ptr,new_TVNode_ptr,temp_new_TVNode_ptr;
+    Event_ptr temp_Event_ptr,proc_Event_ptr,prev_Event_ptr;
+    Sport_ptr temp_Sport_ptr;
+    FILE *fp;
+    char *sport_name;
+    sport_name=malloc(100*sizeof(char));
+ 
+ 
+    fp=fopen("sample.txt","r");
+    if (fp==NULL) return -2;
+    if (fgetc(fp)!='<') return -3;
+    fscanf(fp,"%d",&emmission_num);
+    if (fgetc(fp)!='>') return -4;
+ 
+ 
+ 
+ 
+    if (fgetc(fp)!='\n') return -98;
+    for (i=0;i<emmission_num;i++){
+ 
+        temp_TVNode_ptr=malloc(sizeof(struct TVNode_t));
+        temp_TVNode_ptr->next=header_TVNode_ptr;
+        header_TVNode_ptr=temp_TVNode_ptr;
+ 
+        header_TVNode_ptr->anEmmission=malloc(sizeof(struct Emmission_t));
+        if (fgetc(fp)!='<') return -5;
+        read_int(&(header_TVNode_ptr->anEmmission->idNumber),fp);
+        if (fgetc(fp)!='>') return -6;
+        read_text(&header_TVNode_ptr->anEmmission->title,fp);
+        read_text(&header_TVNode_ptr->anEmmission->description,fp);
+        read_text(&header_TVNode_ptr->anEmmission->tvProducer,fp);
+        if (fgetc(fp)!='\n') return -97;
+ 
+        read_time(&(header_TVNode_ptr->anEmmission->startTime),fp);
+ 
+        read_time(&(header_TVNode_ptr->anEmmission->endTime),fp);
+        if (fgetc(fp)!='\n') return -96;
+        if (fgetc(fp)!='<') return -7;
+        read_int(&event_num,fp);
+        if (fgetc(fp)!='>') return -8;
+        if (fgetc(fp)!='\n') return -95;
+ 
+        header_TVNode_ptr->anEmmission->subjects=NULL;
+ 
+        for(k=0;k<event_num;k++){
+ 
+            temp_Event_ptr=malloc(sizeof(struct Event_t));
+            temp_Sport_ptr=malloc(sizeof(struct Sport_t));
+ 
+            temp_Event_ptr->next=header_TVNode_ptr->anEmmission->subjects;
+            header_TVNode_ptr->anEmmission->subjects=temp_Event_ptr;
+            header_TVNode_ptr->anEmmission->subjects->sport=temp_Sport_ptr;
+ 
+            read_text(&header_TVNode_ptr->anEmmission->subjects->eventTitle,fp);
+ 
+            read_text(&header_TVNode_ptr->anEmmission->subjects->organizer,fp);
+            if (fgetc(fp)!='\n') return -94;
+            read_time(&(header_TVNode_ptr->anEmmission->subjects->happeningTime),fp);
+ 
+            read_text(&header_TVNode_ptr->anEmmission->subjects->eventPlace,fp);
+ 
+            if (fgetc(fp)!='<') return -9;
+            read_int(&(header_TVNode_ptr->anEmmission->subjects->official),fp);
+ 
+            if (fgetc(fp)!='>') return -10;
+ 
+            if (fgetc(fp)!='\n') return -93;
+ 
+            read_text(&header_TVNode_ptr->anEmmission->subjects->sport->name,fp);
+ 
+            if (fgetc(fp)!='<') return -11;
+            read_int(&(header_TVNode_ptr->anEmmission->subjects->sport->classical),fp);
+            if (fgetc(fp)!='>') return -12;
+ 
+            if (fgetc(fp)!='<') return -13;
+            read_int(&(header_TVNode_ptr->anEmmission->subjects->sport->individual),fp);
+            if (fgetc(fp)!='>') return -14;
+            if (fgetc(fp)!='\n') return -92;
+            read_text(&header_TVNode_ptr->anEmmission->subjects->sport->participant1,fp);
+ 
+            read_text(&header_TVNode_ptr->anEmmission->subjects->sport->participant2,fp);
+            if (fgetc(fp)!='\n') return -91;
+        }
+    }
+    fclose(fp);
+    list_sort(&header_TVNode_ptr,emmission_num);
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    scanf("%s",sport_name);
+    temp_TVNode_ptr=header_TVNode_ptr;
+    new_TVNode_ptr=NULL;
+    while(temp_TVNode_ptr!=NULL){
+        if ((bool_key(temp_TVNode_ptr->anEmmission,sport_name)==0)){
+ 
+            temp_new_TVNode_ptr=malloc(sizeof(struct TVNode_t));
+            temp_new_TVNode_ptr->next=new_TVNode_ptr;
+            new_TVNode_ptr=temp_new_TVNode_ptr;
+            new_TVNode_ptr->anEmmission=temp_TVNode_ptr->anEmmission;
+            }
+ 
+        temp_TVNode_ptr=temp_TVNode_ptr->next;
+ 
+    }
+    if (new_TVNode_ptr==NULL) return 1821;
+    printf("%s",(new_TVNode_ptr->anEmmission->description));
+    temp_new_TVNode_ptr=new_TVNode_ptr;
+    while (temp_new_TVNode_ptr!=NULL){
+        putchar('<');
+        printf("%s",temp_new_TVNode_ptr->anEmmission->title);
+        putchar('>');
+        putchar('<');
+        printf("%s",temp_new_TVNode_ptr->anEmmission->tvProducer);
+        putchar('>');
+        putchar('<');
+        printf("%d-%d-%d,%d:%d",temp_new_TVNode_ptr->anEmmission->startTime.y,temp_new_TVNode_ptr->anEmmission->startTime.m,temp_new_TVNode_ptr->anEmmission->startTime.d,temp_new_TVNode_ptr->anEmmission->startTime.hh,temp_new_TVNode_ptr->anEmmission->startTime.mm);
+        putchar('>');
+        putchar('\n');
+ 
+        proc_Event_ptr=NULL;
+        i=1;
+        prev_Event_ptr=temp_new_TVNode_ptr->anEmmission->subjects;
+       while(proc_Event_ptr!=prev_Event_ptr) {
+        while (prev_Event_ptr->next!=proc_Event_ptr) prev_Event_ptr=prev_Event_ptr->next;
+        proc_Event_ptr=prev_Event_ptr;
+        putchar('<');
+        printf("%s",proc_Event_ptr->eventTitle);
+        putchar('>');
+        putchar('<');
+        printf("%d",i);
+        putchar('>');
+        putchar('\n');
+        i++;
+        prev_Event_ptr=temp_new_TVNode_ptr->anEmmission->subjects;
+       }
+ 
+ 
+ 
+ 
+ 
+ 
+        temp_new_TVNode_ptr=temp_new_TVNode_ptr->next;
+    }
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+    return 0;
+}
